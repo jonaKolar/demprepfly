@@ -7,4 +7,4 @@ Functions to prepare DEMs for UAV mission planning
 python fill_dem.py input.tif input.shp output.tif --smoothing-radius 5.0 --offset -20.0
 ~~~
 
-Use ```python fill_crevasses.py -h``` for help
+Use ```python fill_dem.py -h``` for help
