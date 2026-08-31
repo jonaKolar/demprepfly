@@ -60,7 +60,7 @@ Use `python prepdemfly.py -h` for the full help text.
 
 ### Examples
 
-Fill crevasses, smooth, and lower the DEM by 20 units:
+Fill crevasses, smooth, and lower the DEM by 20 meters:
 
 ```
 python prepdemfly.py input.tif output.tif --fill-mask crevasses.shp --smoothing-radius 5.0 --vshift -20.0
@@ -72,7 +72,7 @@ Just convert an ellipsoid-height DEM to geoid heights:
 python prepdemfly.py input.tif output.tif --to-geoid --geoid-grid geoid.tif
 ```
 
-Fill holes only, with a larger search distance:
+Fill holes only, with a larger search distance (e.g. for large holes (measured in pixels):
 
 ```
 python prepdemfly.py input.tif output.tif --fill-mask crevasses.shp --fill-max-search-distance 2000
