@@ -1,15 +1,30 @@
 #!/usr/bin/env python3
+"""Command line tool to prepare a DEM GeoTIFF: fill holes, smooth, vertically shift,
+and/or convert between geoid and ellipsoid heights.
+
+Usage:
+    python prepdem.py input.tif output.tif [options]
+"""
 
 import argparse
-import numpy as np
 
-def prepdem(input_tif, output_tif=None, fill_mask=None, fill_max_search_distance=1000, fill_smoothing_iterations=3, smoothing_radius=0.0, vshift=0.0, to_ellipsoid=False, to_geoid=False, geoid_grid=None):
+import numpy as np
+from geopandas import read_file as gpd_read_file
+from rasterio import open as rasterio_open
+from rasterio.warp import reproject, Resampling
+from rasterio.features import rasterize
+from rasterio.fill import fillnodata
+from scipy.ndimage import gaussian_filter
+
+
+def prepdem(input_tif, output_tif=None, fill_mask=None, fill_max_search_distance=1000,
+            fill_smoothing_iterations=3, smoothing_radius=0.0, vshift=0.0,
+            to_ellipsoid=False, to_geoid=False, geoid_grid=None):
     """Applies multiple preparation steps to a digital elevation model (DEM) tif file. Optional steps are:
-        - fill holes: remove and interpolate ares loaded from shape file
+        - fill holes: remove and interpolate areas loaded from shape file
         - smoothening: applies Gaussian smoothening
         - vertical shift: constant offset
         - to geoid / ellipsoid: applies vertical shift defined in loaded grid file
-
 
     Args:
         input_tif: Path to DEM geotif.
@@ -22,20 +37,13 @@ def prepdem(input_tif, output_tif=None, fill_mask=None, fill_max_search_distance
         to_ellipsoid: If True geoid height is added to the data. geoid_grid must be provided. Defaults to False.
         to_geoid: If True geoid height is subtracted from the data. geoid_grid must be provided. Defaults to False.
         geoid_grid: Path to gridded geoid height as .agr or .tif file. Defaults to None.
-        
+
     Raises:
-        ValueError: _description_
+        ValueError: If to_ellipsoid or to_geoid is True but geoid_grid is not provided.
 
     Returns:
         data
     """
-
-    from geopandas import read_file as gpd_read_file
-    from rasterio import open as rasterio_open
-    from rasterio.warp import reproject, Resampling
-    from rasterio.features import rasterize
-    from rasterio.fill import fillnodata
-    from scipy.ndimage import gaussian_filter
 
     # Read dem data
     with rasterio_open(input_tif) as src:
@@ -54,11 +62,12 @@ def prepdem(input_tif, output_tif=None, fill_mask=None, fill_max_search_distance
     if fill_mask is not None:
         gdf = gpd_read_file(fill_mask).to_crs(crs)  # read crevasse shape file and transform to the raster CRS
         mask = rasterize([(geom, 1) for geom in gdf.geometry], out_shape=(height, width),
-                        transform=transform, fill=0)[np.newaxis, :, :]
-        mask = np.array(mask, dtype=np.bool)
+                          transform=transform, fill=0)[np.newaxis, :, :]
+        mask = np.array(mask, dtype=bool)
 
         # fill masked values
-        data = fillnodata(data, mask=~mask, max_search_distance=fill_max_search_distance, smoothing_iterations=fill_smoothing_iterations)
+        data = fillnodata(data, mask=~mask, max_search_distance=fill_max_search_distance,
+                           smoothing_iterations=fill_smoothing_iterations)
 
     # smoothening
     if smoothing_radius > 0.0:
@@ -71,8 +80,8 @@ def prepdem(input_tif, output_tif=None, fill_mask=None, fill_max_search_distance
     if to_ellipsoid or to_geoid:
         if geoid_grid is None:
             raise ValueError("geoid_grid must be provided if to_ellipsoid or to_geoid is used.")
-        
-        with rasterio.open(geoid_grid) as src:
+
+        with rasterio_open(geoid_grid) as src:
             geoid_data = np.zeros_like(data, dtype=np.float32)
 
             if src.crs is None:
@@ -108,34 +117,55 @@ def prepdem(input_tif, output_tif=None, fill_mask=None, fill_max_search_distance
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Remove and interpolate crevasse areas from a GeoTIFF DEM, "
-                     "using a polygon shapefile mask, then smooth and offset the result."
+        description="Prepare a DEM GeoTIFF: optionally fill masked areas, apply Gaussian "
+                     "smoothing, a vertical shift, and/or geoid/ellipsoid conversion."
     )
-    parser.add_argument("input_tif", help="Path to input GeoTIFF DEM.")
-    parser.add_argument("input_shp", help="Path to polygon shapefile marking areas to remove and fill.")
-    parser.add_argument("output_tif", help="Path to save the output GeoTIFF.")
+    parser.add_argument("input_tif", help="Path to input DEM GeoTIFF.")
+    parser.add_argument("output_tif", help="Path to save the output DEM GeoTIFF.")
+
+    parser.add_argument("--fill-mask", default=None,
+                         help="Path to polygon shapefile marking areas to remove and fill. Default: None (no filling).")
+    parser.add_argument("--fill-max-search-distance", type=float, default=1000,
+                         help="Max pixel search distance for gap filling. Default: 1000")
+    parser.add_argument("--fill-smoothing-iterations", type=int, default=3,
+                         help="Number of 3x3 smoothing passes on the filled section. Default: 3")
+
     parser.add_argument("--smoothing-radius", type=float, default=0.0,
-                         help="Radius (in pixels) for Gaussian smoothing after filling. Default: 0.0")
-    parser.add_argument("--offset", type=float, default=0.0,
+                         help="Radius (in pixels) for Gaussian smoothing. 0 disables smoothing. Default: 0.0")
+
+    parser.add_argument("--vshift", type=float, default=0.0,
                          help="Vertical offset added to all values (negative to lower the DEM). Default: 0.0")
-    parser.add_argument("--max-search-distance", type=float, default=1000,
-                         help="Maximum search distance (in pixels) for gap filling. Default: 100.0")
-    parser.add_argument("--smoothing_iterations", type=float, default=3,
-                             help="The number of 3x3 smoothing filter passes to run on the filled section.")
+
+    geoid_group = parser.add_mutually_exclusive_group()
+    geoid_group.add_argument("--to-ellipsoid", action="store_true",
+                              help="Add geoid height to the data (requires --geoid-grid).")
+    geoid_group.add_argument("--to-geoid", action="store_true",
+                              help="Subtract geoid height from the data (requires --geoid-grid).")
+    parser.add_argument("--geoid-grid", default=None,
+                         help="Path to gridded geoid height (.agr or .tif). Required with --to-ellipsoid/--to-geoid.")
+
     return parser.parse_args()
 
 
 def main():
     args = parse_args()
-    fill_dem(
+
+    if (args.to_ellipsoid or args.to_geoid) and args.geoid_grid is None:
+        raise SystemExit("Error: --geoid-grid is required when using --to-ellipsoid or --to-geoid.")
+
+    prepdem(
         input_tif=args.input_tif,
-        input_shp=args.input_shp,
         output_tif=args.output_tif,
+        fill_mask=args.fill_mask,
+        fill_max_search_distance=args.fill_max_search_distance,
+        fill_smoothing_iterations=args.fill_smoothing_iterations,
         smoothing_radius=args.smoothing_radius,
-        offset=args.offset,
-        filling_max_search_distance=args.max_search_distance,
+        vshift=args.vshift,
+        to_ellipsoid=args.to_ellipsoid,
+        to_geoid=args.to_geoid,
+        geoid_grid=args.geoid_grid,
     )
-    print(f"Saved DEM to {args.output_tif}")
+    print(f"Saved prepared DEM to {args.output_tif}")
 
 
 if __name__ == "__main__":
