@@ -1,8 +1,8 @@
-# flightDEM
+# demprepfly
 
 Functions to prepare DEMs for UAV mission planning.
 
-## `prepdemfly.py`
+## `demprepfly.py`
 
 Prepares a DEM GeoTIFF for flight planning. It can:
 
@@ -18,7 +18,7 @@ Can be imported and used in a script (see `usage.ipynb`), or run from the comman
 ### Command line usage
 
 ```
-python prepdemfly.py input.tif output.tif [options]
+python demprepfly.py input.tif output.tif [options]
 ```
 
 **Required arguments**
@@ -56,26 +56,26 @@ python prepdemfly.py input.tif output.tif [options]
 | `--to-geoid` | Subtract geoid height from the data (converts ellipsoid heights to geoid heights). Requires `--geoid-grid`. Mutually exclusive with `--to-ellipsoid`. | off |
 | `--geoid-grid` | Path to a gridded geoid height file (`.agr` or `.tif`). Required if `--to-ellipsoid` or `--to-geoid` is used. | `None` |
 
-Use `python prepdemfly.py -h` for the full help text.
+Use `python demprepfly.py -h` for the full help text.
 
 ### Examples
 
 Fill crevasses, smooth, and lower the DEM by 20 meters:
 
 ```
-python prepdemfly.py input.tif output.tif --fill-mask crevasses.shp --smoothing-radius 5.0 --vshift -20.0
+python demprepfly.py input.tif output.tif --fill-mask crevasses.shp --smoothing-radius 5.0 --vshift -20.0
 ```
 
 Just convert an ellipsoid-height DEM to geoid heights:
 
 ```
-python prepdemfly.py input.tif output.tif --to-geoid --geoid-grid geoid.tif
+python demprepfly.py input.tif output.tif --to-geoid --geoid-grid geoid.tif
 ```
 
 Fill holes only, with a larger search distance (e.g. for large holes (measured in pixels):
 
 ```
-python prepdemfly.py input.tif output.tif --fill-mask crevasses.shp --fill-max-search-distance 2000
+python demprepfly.py input.tif output.tif --fill-mask crevasses.shp --fill-max-search-distance 2000
 ```
 
 ### Python usage
