@@ -11,4 +11,5 @@ dependencies:
   - geopandas
   - pyproj
   - rasterio
+  - scikit-image
   - ipykernel
