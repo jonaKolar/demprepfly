@@ -20,7 +20,7 @@ from skimage.morphology import closing, disk
 from scipy.ndimage import gaussian_filter, binary_dilation
 
 
-def prepdem(input_tif, output_tif=None, save_mask=False, fill_mask=None, fill_nodata=False, detect_maxsize=0, detect_mindepth=0, detect_enlarge=None, fill_max_search_distance=1000,
+def prep_dem(input_tif, output_tif=None, save_mask=False, fill_mask=None, fill_nodata=False, detect_maxsize=0, detect_mindepth=0, detect_enlarge=None, fill_max_search_distance=1000,
             fill_smoothing_iterations=3, smoothing_radius=0.0, vshift=0.0,
             to_ellipsoid=False, to_geoid=False, geoid_grid=None):
     """Applies multiple preparation steps to a digital elevation model (DEM) tif file. Optional steps are:
@@ -250,7 +250,7 @@ def main():
     if (args.detect_maxsize > 0) != (args.detect_mindepth > 0):
         raise SystemExit("Error: --detect-maxsize and --detect-mindepth must be used together.")
 
-    prepdem(
+    prep_dem(
         input_tif=args.input_tif,
         output_tif=args.output_tif,
         save_mask=args.save_mask,
