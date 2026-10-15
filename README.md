@@ -50,16 +50,16 @@ Runs before all other steps. The horizontal CRS of the input is taken from `inpu
 > - The EPSG code of a non vertical (geographic or projected) CRS means heights above the ellipsoid of *that* CRS, independent of the grid. E.g. `4979` (or `4326`) gives WGS84 ellipsoidal heights, also on a swiss LV95 grid.
 > - `ellipsoid` means heights above the ellipsoid of the corresponding horizontal CRS (the target CRS for `--to-vert-epsg`, i.e. `--to-horiz-epsg`, or the input CRS if not given). This is not always WGS84: e.g. UTM32N (EPSG:32632) uses the WGS84 ellipsoid, but the swiss LV95 (EPSG:2056) uses Bessel 1841. In the Alps, heights above the two ellipsoids differ by about 50 m.
 > - Examples: 
-WGS84: EPSG:4326 or EPSG:4979 
+WGS84: EPSG:4326 or EPSG:4979, 
 ETRS89: EPSG:4258, 
-CH1903+ / LV95: EPSG:4150 or EPSG:2056
-CH1903 / LV03: EPSG:21781
+CH1903+ / LV95: EPSG:4150 or EPSG:2056, 
+CH1903 / LV03: EPSG:21781, 
 
 >**Geoidal heights.** Examples:
-EGM96 Geoid: EPSG:5773
-EGM2008 Geoid: EPSG:3855
-LN02 geoid: EPSG:5728
-LHN95 geoid: EPSG:5729
+EGM96 Geoid: EPSG:5773, 
+EGM2008 Geoid: EPSG:3855, 
+LN02 geoid: EPSG:5728, 
+LHN95 geoid: EPSG:5729, 
 
 **Hole filling from mask**
 
